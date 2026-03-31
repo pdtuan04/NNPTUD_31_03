@@ -74,4 +74,34 @@ router.post("/", CheckLogin, function (req, res, next) {
   });
 });
 
+router.get("/", CheckLogin, async function (req, res, next) {
+  try {
+    let currentUser = req.user;
+    let messages = await messageModel
+      .find({
+        $or: [{ from: currentUser._id }, { to: currentUser._id }]
+      })
+      .sort({ createdAt: -1 });
+
+    let seen = new Set();
+    let result = [];
+
+    for (let m of messages) {
+      let otherUserId =
+        String(m.from) === String(currentUser._id) ? String(m.to) : String(m.from);
+
+      if (seen.has(otherUserId)) continue;
+
+      seen.add(otherUserId);
+      result.push({
+        otherUser: otherUserId,
+        lastMessage: m
+      });
+    }
+
+    res.send(result);
+  } catch (error) {
+    res.status(404).send({ message: error.message });
+  }
+});
 module.exports = router;
